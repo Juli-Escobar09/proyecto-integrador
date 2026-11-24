@@ -216,9 +216,6 @@ const slides = [
                   <a href="/iniciosesion/botones">
                     Inicio sesión
                   </a>
-            <a href="/crearsesion">
-                    Crear sesión
-                  </a>
                   
                   <a href="/registrarse">
                     Registrarse
