@@ -1,26 +1,35 @@
 
+
 "use client";
 
 import { useState } from "react";
+import { supabase } from "../supabase/supabase";
 import "./global.css";
 
 export default function CrearSesion() {
   const [nombre, setNombre] = useState("");
   const [gmail, setGmail] = useState("");
   const [contrasena, setContrasena] = useState("");
-  const [tipoUsuario, setTipoUsuario] = useState("alumno");
   const [mensaje, setMensaje] = useState("");
+  const [cargando, setCargando] = useState(false);
 
-  const registrarse = (e: React.FormEvent<HTMLFormElement>) => {
+  const registrarse = async (
+    e: React.FormEvent<HTMLFormElement>
+  ) => {
     e.preventDefault();
+    setMensaje("");
 
     if (!nombre.trim() || !gmail.trim() || !contrasena) {
       setMensaje("Completá todos los campos.");
       return;
     }
 
-    if (!gmail.toLowerCase().endsWith("@escuelasproa.edu.ar")) {
-      setMensaje("Ingresá una dirección de Gmail válida.");
+    const email = gmail.trim().toLowerCase();
+
+    if (!email.endsWith("@escuelasproa.edu.ar")) {
+      setMensaje(
+        "Ingresá tu correo institucional @escuelasproa.edu.ar."
+      );
       return;
     }
 
@@ -29,21 +38,61 @@ export default function CrearSesion() {
       return;
     }
 
-    setMensaje(
-      "Formulario completado correctamente. Falta conectar la base de datos."
-    );
+    try {
+      setCargando(true);
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: contrasena,
+        options: {
+          data: {
+            nombre_completo: nombre.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data.user && !data.session) {
+        setMensaje(
+          "¡Cuenta creada! Revisá tu correo institucional para confirmar el registro."
+        );
+      } else {
+        setMensaje(
+          "¡Registro exitoso! Tu cuenta y perfil fueron creados."
+        );
+      }
+
+      setNombre("");
+      setGmail("");
+      setContrasena("");
+    } catch (error) {
+      console.error("Error al registrarse:", error);
+
+      setMensaje(
+        error instanceof Error
+          ? error.message
+          : "No se pudo crear la cuenta. Intentá nuevamente."
+      );
+    } finally {
+      setCargando(false);
+    }
   };
 
   return (
     <main className="registro-fondo">
       <section className="registro-tarjeta">
         <h1>CREAR CUENTA</h1>
+
         <p className="registro-descripcion">
           Escuela Experimental ProA Despeñaderos
         </p>
 
         <form onSubmit={registrarse}>
           <label htmlFor="nombre">Nombre completo</label>
+
           <input
             id="nombre"
             type="text"
@@ -54,11 +103,12 @@ export default function CrearSesion() {
             required
           />
 
-          <label htmlFor="gmail">Gmail</label>
+          <label htmlFor="gmail">Correo institucional</label>
+
           <input
             id="gmail"
             type="email"
-            placeholder="@escuelasproa.edu.ar"
+            placeholder="nombre@escuelasproa.edu.ar"
             value={gmail}
             onChange={(e) => setGmail(e.target.value)}
             autoComplete="email"
@@ -66,6 +116,7 @@ export default function CrearSesion() {
           />
 
           <label htmlFor="contrasena">Contraseña</label>
+
           <input
             id="contrasena"
             type="password"
@@ -77,20 +128,9 @@ export default function CrearSesion() {
             required
           />
 
-          <label htmlFor="tipoUsuario">¿Qué rol tenés?</label>
-          <select
-            id="tipoUsuario"
-            value={tipoUsuario}
-            onChange={(e) => setTipoUsuario(e.target.value)}
-            required
-          >
-            <option value="alumno">Alumno/a</option>
-            <option value="directivo">Directora/or</option>
-            <option value="preceptor">Preceptora/or</option>
-            <option value="coordinador">Coordinadora/or</option>
-          </select>
-
-          <button type="submit">REGISTRARME</button>
+          <button type="submit" disabled={cargando}>
+            {cargando ? "CREANDO CUENTA..." : "REGISTRARME"}
+          </button>
         </form>
 
         {mensaje && (
